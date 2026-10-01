@@ -1,0 +1,15 @@
+SIRVANTA FLOW - QUICK START (all free)
+
+1. Install Node.js (LTS version) from https://nodejs.org
+2. Open a terminal INSIDE this folder:
+     Windows: open the folder, click the address bar, type  cmd  and press Enter
+     Mac: right-click the folder > New Terminal at Folder
+3. Run these two commands (once):
+     npm install react@18 react-dom@18 zustand dexie dexie-react-hooks lucide-react recharts@2
+     npm install -D vite@5 @vitejs/plugin-react@4 tailwindcss@3 postcss autoprefixer
+4. Start the preview:
+     npm run dev
+5. Open  http://localhost:5173  in your browser. Stop it any time with Ctrl+C.
+
+The AI features (statement parser, advisor, briefing) need an Anthropic API key, which is not free.
+Everything else works without it.
