@@ -109,12 +109,12 @@ const SECURITY = [
   {
     icon: EyeOff,
     title: 'AI sees only what you send',
-    body: 'When you parse a statement or ask a question, that text and a summary of the figures needed to answer are sent through our server function to Anthropic. Nothing is sent otherwise.',
+    body: 'When you parse a statement or ask a question, that text and a summary of the figures needed to answer are sent through our server function to our AI provider. Nothing is sent otherwise.',
   },
   {
     icon: KeyRound,
     title: 'API keys never reach the browser',
-    body: 'The Anthropic key is stored as a server environment variable and used only inside the serverless function.',
+    body: 'The AI provider key is stored as a server environment variable and used only inside the serverless function.',
   },
 ];
 
@@ -146,7 +146,7 @@ const LEGAL = {
     title: 'Privacy Policy',
     points: [
       'Your transactions, clients, invoices, and settings are stored in your browser\'s local database on your device.',
-      'When you use AI features, the text you submit and a summary of the figures needed to answer are sent through our server function to Anthropic to generate a response.',
+      'When you use AI features, the text you submit and a summary of the figures needed to answer are sent through our server function to our AI provider to generate a response.',
       'Clearing your browser data deletes your local records. Export a CSV backup to keep a copy.',
       'Questions about your data can be sent to the contact address listed in your account.',
     ],

@@ -14,7 +14,7 @@ import {
 } from '../db';
 import { useStore } from '../store';
 import { tierAtLeast, lockedMessage } from '../plans';
-import { usd } from '../finance';
+import { usd, usd2 } from '../finance';
 import {
   ehrTier, rankClients, blendedEhr, totalHours, scopeCreepShare, ehrIfCreepBilled,
   calcInvoice, lineAmount, addDaysIso, displayStatus, TERMS, EHR_HIGH, EHR_TARGET,
@@ -27,7 +27,6 @@ import {
   MUTED, GOLD_TEXT, DIVIDER, BTN_GOLD, BTN_OUTLINE, INPUT,
 } from '../ui';
 
-const usd2 = (n) => n.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2 });
 const fmtShort = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 const BUSINESS_KEY = 'sirvanta-business-name';
 
@@ -192,9 +191,9 @@ function ClientManagerCard({ clients, userTier, onAdd, onEdit, notice }) {
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${c.status === 'paused' ? STATUS_CHIPS.draft : TINT_TEAL + ' text-[#0B6E70] dark:text-[#2DD4BF]'}`}>{c.status}</span>
                   </td>
                   <td className="whitespace-nowrap text-right">
-                    <button onClick={guard(() => onEdit(c))} aria-label={`Edit ${c.name}`} className={`rounded p-1.5 ${MUTED} hover:bg-[#E8DEC7] dark:hover:bg-[#18181D]`}><Pencil size={15} /></button>
-                    <button onClick={guard(() => toggle(c))} aria-label={`${c.status === 'paused' ? 'Resume' : 'Pause'} ${c.name}`} className={`rounded p-1.5 ${MUTED} hover:bg-[#E8DEC7] dark:hover:bg-[#18181D]`}>{c.status === 'paused' ? <Play size={15} /> : <Pause size={15} />}</button>
-                    <button onClick={guard(() => remove(c))} aria-label={`Delete ${c.name}`} className={`rounded p-1.5 ${MUTED} hover:bg-[#E8DEC7] dark:hover:bg-[#18181D]`}><Trash2 size={15} /></button>
+                    <button onClick={guard(() => onEdit(c))} aria-label={`Edit ${c.name}`} className={`rounded p-1.5 ${MUTED} hover:bg-[#F1F5F9] dark:hover:bg-white/5`}><Pencil size={15} /></button>
+                    <button onClick={guard(() => toggle(c))} aria-label={`${c.status === 'paused' ? 'Resume' : 'Pause'} ${c.name}`} className={`rounded p-1.5 ${MUTED} hover:bg-[#F1F5F9] dark:hover:bg-white/5`}>{c.status === 'paused' ? <Play size={15} /> : <Pause size={15} />}</button>
+                    <button onClick={guard(() => remove(c))} aria-label={`Delete ${c.name}`} className={`rounded p-1.5 ${MUTED} hover:bg-[#F1F5F9] dark:hover:bg-white/5`}><Trash2 size={15} /></button>
                   </td>
                 </tr>
               ))}
@@ -242,7 +241,7 @@ function EhrCard({ clients }) {
                     </div>
                     <span className="text-xl font-bold tabular-nums">{usd(c.ehr)}<span className={`text-sm font-medium ${MUTED}`}>/hr</span></span>
                   </div>
-                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E5DAC2] dark:bg-[#27272A]" aria-hidden="true">
+                  <div className="mt-3 h-2 overflow-hidden rounded-full bg-[#E2E8F0] dark:bg-[#27272A]" aria-hidden="true">
                     <div className="h-full rounded-full transition-all duration-500 motion-reduce:transition-none" style={{ width: `${Math.max(2, Math.min(100, (c.ehr / top) * 100))}%`, background: b.bar }} />
                   </div>
                   <p className={`mt-2 text-xs ${MUTED}`}>
@@ -286,7 +285,7 @@ function EhrCard({ clients }) {
 function InvoiceSheet({ business, number, client, issueDate, dueDate, terms, items, subtotal, notes }) {
   const rows = items.filter((i) => i.description.trim() || lineAmount(i) > 0);
   return (
-    <div className="mx-auto w-full max-w-[210mm] bg-white p-8 text-[#1B2233]" style={{ fontFamily: "'Plus Jakarta Sans', Inter, system-ui, sans-serif" }}>
+    <div className="mx-auto w-full max-w-[210mm] bg-white p-8 text-[#0F172A]" style={{ fontFamily: "'Plus Jakarta Sans', Inter, system-ui, sans-serif" }}>
       <div className="flex items-start justify-between gap-6">
         <div className="flex items-center gap-3">
           <span className="grid h-11 w-11 place-items-center rounded-lg bg-[#12233F] text-xl font-extrabold text-[#E7C873]">{(business.trim()[0] || 'S').toUpperCase()}</span>
@@ -294,28 +293,28 @@ function InvoiceSheet({ business, number, client, issueDate, dueDate, terms, ite
         </div>
         <div className="text-right">
           <div className="text-3xl font-extrabold tracking-tight">Invoice</div>
-          <div className="mt-1 text-sm text-[#655D4C]">{number || '—'}</div>
+          <div className="mt-1 text-sm text-[#64748B]">{number || '—'}</div>
         </div>
       </div>
       <div className="mt-6 h-[3px] bg-[#C5A059]" />
 
       <div className="mt-6 grid grid-cols-2 gap-6 text-sm sm:grid-cols-4">
-        <div className="col-span-2 sm:col-span-1"><div className="text-xs text-[#655D4C]">Billed to</div><div className="mt-1 font-semibold">{client || '—'}</div></div>
-        <div><div className="text-xs text-[#655D4C]">Issued</div><div className="mt-1 font-semibold">{fmtShort(issueDate)}</div></div>
-        <div><div className="text-xs text-[#655D4C]">Due</div><div className="mt-1 font-semibold">{fmtShort(dueDate)}</div></div>
-        <div><div className="text-xs text-[#655D4C]">Terms</div><div className="mt-1 font-semibold">Net {terms}</div></div>
+        <div className="col-span-2 sm:col-span-1"><div className="text-xs text-[#64748B]">Billed to</div><div className="mt-1 font-semibold">{client || '—'}</div></div>
+        <div><div className="text-xs text-[#64748B]">Issued</div><div className="mt-1 font-semibold">{fmtShort(issueDate)}</div></div>
+        <div><div className="text-xs text-[#64748B]">Due</div><div className="mt-1 font-semibold">{fmtShort(dueDate)}</div></div>
+        <div><div className="text-xs text-[#64748B]">Terms</div><div className="mt-1 font-semibold">Net {terms}</div></div>
       </div>
 
       <table className="mt-8 w-full text-left text-sm">
         <thead>
-          <tr className="border-b border-[#DDD2BA] text-xs text-[#655D4C]">
+          <tr className="border-b border-[#E2E8F0] text-xs text-[#64748B]">
             <th className="py-2 font-medium">Description</th><th className="w-16 text-right font-medium">Qty</th><th className="w-28 text-right font-medium">Rate</th><th className="w-32 text-right font-medium">Amount</th>
           </tr>
         </thead>
         <tbody>
-          {rows.length === 0 && <tr><td colSpan={4} className="py-6 text-center text-[#655D4C]">Add a line item to see it here.</td></tr>}
+          {rows.length === 0 && <tr><td colSpan={4} className="py-6 text-center text-[#64748B]">Add a line item to see it here.</td></tr>}
           {rows.map((i) => (
-            <tr key={i.id} className="border-b border-[#EFE9DA]">
+            <tr key={i.id} className="border-b border-[#F1F5F9]">
               <td className="py-3 pr-3">{i.description || 'Item'}</td>
               <td className="text-right tabular-nums">{i.qty}</td>
               <td className="text-right tabular-nums">{usd2(Number(i.rate) || 0)}</td>
@@ -327,15 +326,15 @@ function InvoiceSheet({ business, number, client, issueDate, dueDate, terms, ite
 
       <div className="mt-6 flex justify-end">
         <div className="w-full max-w-xs">
-          <div className="flex justify-between py-1 text-sm"><span className="text-[#655D4C]">Subtotal</span><span className="tabular-nums">{usd2(subtotal)}</span></div>
+          <div className="flex justify-between py-1 text-sm"><span className="text-[#64748B]">Subtotal</span><span className="tabular-nums">{usd2(subtotal)}</span></div>
           <div className="mt-1 flex items-center justify-between rounded-lg bg-[#12233F] px-4 py-3 text-white">
             <span className="text-sm">Total due</span><span className="text-xl font-bold tabular-nums">{usd2(subtotal)}</span>
           </div>
         </div>
       </div>
 
-      {notes.trim() && <p className="mt-8 whitespace-pre-line text-sm text-[#655D4C]">{notes}</p>}
-      <div className="mt-10 border-t border-[#DDD2BA] pt-4 text-xs text-[#655D4C]">Payment is due within {terms} days of the issue date. Thank you for your business.</div>
+      {notes.trim() && <p className="mt-8 whitespace-pre-line text-sm text-[#64748B]">{notes}</p>}
+      <div className="mt-10 border-t border-[#E2E8F0] pt-4 text-xs text-[#64748B]">Payment is due within {terms} days of the issue date. Thank you for your business.</div>
     </div>
   );
 }
@@ -446,7 +445,7 @@ function InvoiceModal({ clients, taxRate, onClose, onSaved }) {
                       <label htmlFor={`li-r-${i.id}`} className={idx === 0 ? 'mb-1 block text-xs font-medium' : 'sr-only'}>Rate</label>
                       <input id={`li-r-${i.id}`} type="number" min="0" step="any" className={`${INPUT} tabular-nums`} value={i.rate} onChange={(e) => updateItem(i.id, { rate: e.target.value === '' ? 0 : Math.max(0, Number(e.target.value)) })} />
                     </div>
-                    <button type="button" onClick={() => setItems((l) => (l.length > 1 ? l.filter((x) => x.id !== i.id) : l))} disabled={items.length === 1} aria-label="Remove line item" className={`mb-1 rounded p-2 ${MUTED} hover:bg-[#E8DEC7] disabled:opacity-30 dark:hover:bg-[#18181D]`}><Trash2 size={15} /></button>
+                    <button type="button" onClick={() => setItems((l) => (l.length > 1 ? l.filter((x) => x.id !== i.id) : l))} disabled={items.length === 1} aria-label="Remove line item" className={`mb-1 rounded p-2 ${MUTED} hover:bg-[#F1F5F9] disabled:opacity-30 dark:hover:bg-white/5`}><Trash2 size={15} /></button>
                   </div>
                 ))}
               </div>
@@ -481,7 +480,7 @@ function InvoiceModal({ clients, taxRate, onClose, onSaved }) {
           </div>
 
           <div className="min-w-0">
-            <div className="overflow-hidden rounded-xl border border-[#DDD2BA] shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:border-[#27272A]" aria-label="Invoice preview">
+            <div className="overflow-hidden rounded-xl border border-[#E2E8F0] shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:border-white/10" aria-label="Invoice preview">
               <InvoiceSheet {...sheetProps} />
             </div>
           </div>

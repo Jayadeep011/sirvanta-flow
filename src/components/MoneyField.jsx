@@ -2,6 +2,7 @@
 // Labelled dollar input used across the Cash Flow and Tax tabs.
 
 import React from 'react';
+import { currencySymbol } from '../finance';
 import { MUTED, INPUT } from '../ui';
 
 export default function MoneyField({ id, label, value, onChange, onBlur, hint, disabled, step = 100 }) {
@@ -9,7 +10,7 @@ export default function MoneyField({ id, label, value, onChange, onBlur, hint, d
     <div>
       <label htmlFor={id} className="mb-1 block text-sm font-medium">{label}</label>
       <div className="relative">
-        <span className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm ${MUTED}`}>$</span>
+        <span className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm ${MUTED}`}>{currencySymbol()}</span>
         <input
           id={id}
           type="number"

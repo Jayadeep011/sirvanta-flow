@@ -1,5 +1,5 @@
 /* src/index.css */
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,7 +7,26 @@
 
 html { scroll-behavior: smooth; }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
-body { margin: 0; font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif; }
+
+body { margin: 0; font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif; background: #F8FAFC; color: #0F172A; }
+html.dark body { background: #09090B; color: #F4F4F5; }
+html { color-scheme: light; }
+html.dark { color-scheme: dark; }
+
+/* Financial figures use a monospace face wherever the code marks numbers with tabular-nums */
+.tabular-nums { font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: -0.02em; }
+
+/* Soft radial glow behind marketing sections */
+.hero-glow {
+  background:
+    radial-gradient(60rem 30rem at 15% -10%, rgba(46, 95, 191, 0.18), transparent 60%),
+    radial-gradient(45rem 28rem at 90% 0%, rgba(197, 160, 89, 0.18), transparent 60%);
+}
+html.dark .hero-glow {
+  background:
+    radial-gradient(60rem 30rem at 15% -10%, rgba(91, 141, 239, 0.22), transparent 60%),
+    radial-gradient(45rem 28rem at 90% 0%, rgba(212, 175, 55, 0.14), transparent 60%);
+}
 
 /* Invoice printing: only the .print-only copy of the invoice is shown on paper. */
 .print-only { display: none; }
@@ -16,5 +35,5 @@ body { margin: 0; font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif
   body > *:not(.print-only) { display: none !important; }
   .print-only { display: block !important; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  body { background: #ffffff !important; }
+  body { background: #ffffff !important; color: #0F172A !important; }
 }

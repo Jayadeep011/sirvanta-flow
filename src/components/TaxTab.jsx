@@ -349,7 +349,7 @@ function ScheduleCCard({ rates, taxYear, figures }) {
                     <span className="min-w-0 truncate">{t.description}<span className={`ml-2 text-xs ${MUTED}`}>{t.date} · {t.scheduleCCategory}</span></span>
                     <span className="flex shrink-0 items-center gap-2">
                       <span className="tabular-nums">{usd(t.amount)}</span>
-                      <button onClick={() => deleteTransaction(t.id)} aria-label={`Delete ${t.description}`} className={`rounded p-1 ${MUTED} hover:bg-[#E8DEC7] dark:hover:bg-[#18181D]`}><Trash2 size={14} /></button>
+                      <button onClick={() => deleteTransaction(t.id)} aria-label={`Delete ${t.description}`} className={`rounded p-1 ${MUTED} hover:bg-[#F1F5F9] dark:hover:bg-white/5`}><Trash2 size={14} /></button>
                     </span>
                   </li>
                 ))}
@@ -412,7 +412,7 @@ function YieldModal({ balance, checkingApr, hysaApr, monthlyExpenses, onClose })
       <div role="dialog" aria-modal="true" aria-labelledby="yield-title" className={`${CARD_INDIGO} my-8 w-full max-w-xl p-6`} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start justify-between gap-4">
           <h2 id="yield-title" className="text-xl font-semibold">Yield optimization</h2>
-          <button ref={closeRef} onClick={onClose} aria-label="Close" className={`rounded-md p-1 ${MUTED} hover:bg-[#E8DEC7] dark:hover:bg-[#18181D]`}><X size={18} /></button>
+          <button ref={closeRef} onClick={onClose} aria-label="Close" className={`rounded-md p-1 ${MUTED} hover:bg-[#F1F5F9] dark:hover:bg-white/5`}><X size={18} /></button>
         </div>
         <ul className="mt-4 space-y-4">
           {strategies.map(([title, body]) => (

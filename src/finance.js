@@ -2,15 +2,34 @@
 // Pure calculation helpers for Service 01 (cash flow). No React in here, so the same
 // functions can also feed the AI advisor's context snapshot in a later step.
 
-import { db, toISODate } from './db';
+import { db, toISODate, effectiveTaxRate } from './db';
+import { nextDeadline, getYearFigures } from './tax';
 
 /* ---------- formatting ---------- */
-export const usd = (n) =>
-  (Number.isFinite(n) ? n : 0).toLocaleString('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+// The active currency is set from the top bar. Amounts are labelled in that currency, not converted.
+let currentCurrency = 'USD';
+export const setCurrency = (code) => { currentCurrency = code || 'USD'; };
+export const getCurrency = () => currentCurrency;
+
+const LOCALES = { INR: 'en-IN', SGD: 'en-SG', CAD: 'en-CA' };
+const localeFor = (code) => LOCALES[code] || 'en-US';
+const format = (n, digits) =>
+  (Number.isFinite(n) ? n : 0).toLocaleString(localeFor(currentCurrency), {
+    style: 'currency', currency: currentCurrency, minimumFractionDigits: digits, maximumFractionDigits: digits,
+  });
+
+/** Whole-unit money in the active currency (the name is historical; it is no longer USD only). */
+export const usd = (n) => format(n, 0);
+/** Money with cents, for invoices. */
+export const usd2 = (n) => format(n, 2);
+
+export const currencySymbol = () =>
+  (0).toLocaleString(localeFor(currentCurrency), { style: 'currency', currency: currentCurrency, maximumFractionDigits: 0 }).replace(/[\d\s.,]/g, '');
 
 export const usdCompact = (n) => {
   const a = Math.abs(n);
-  const s = a >= 1000 ? `$${(a / 1000).toFixed(a >= 10000 ? 0 : 1)}k` : `$${Math.round(a)}`;
+  const sym = currencySymbol();
+  const s = a >= 1000 ? `${sym}${(a / 1000).toFixed(a >= 10000 ? 0 : 1)}k` : `${sym}${Math.round(a)}`;
   return n < 0 ? `-${s}` : s;
 };
 
@@ -124,4 +143,32 @@ export async function getRecordedSnapshot(entity = 'business') {
     .reduce((sum, t) => sum + t.amount, 0);
 
   return { count: rows.length, cash: Math.max(0, Math.round(cash)), monthlyExpenses: Math.round(spent / 3) };
+}
+
+/* ---------- starting values for the Safe-to-Spend inputs ---------- */
+/** Cash and tax reserve come from recorded transactions when there are any; otherwise sample values. */
+export async function getDefaultCashInputs(entity, settings) {
+  const recorded = await getRecordedSnapshot(entity);
+  if (!recorded.count) return { cash: 48000, tax: 11500, expenses: settings.monthlyBurn, buffer: settings.bufferTarget };
+  const { gross } = await getYearFigures(nextDeadline(new Date()).taxYear);
+  const tax = entity === 'personal' ? 0 : Math.round(gross * effectiveTaxRate(settings));
+  return { cash: recorded.cash, tax, expenses: settings.monthlyBurn, buffer: settings.bufferTarget };
+}
+
+/* ---------- 30-day forecast ---------- */
+/**
+ * Day-by-day spendable balance for the next 30 days.
+ * Expenses leave evenly (monthly burn / 30). Each receipt { day, amount } arrives on its day,
+ * reduced by the tax set-aside rate.
+ */
+export function buildForecast30({ startBalance, monthlyBurn, receipts, taxRate, days = 30 }) {
+  const daily = monthlyBurn / 30;
+  let balance = startBalance;
+  const points = [{ day: 0, balance: Math.round(balance) }];
+  for (let d = 1; d <= days; d++) {
+    balance -= daily;
+    receipts.filter((r) => r.day === d).forEach((r) => { balance += r.amount * (1 - taxRate); });
+    points.push({ day: d, balance: Math.round(balance) });
+  }
+  return points;
 }

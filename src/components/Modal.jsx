@@ -26,7 +26,7 @@ export default function Modal({ title, onClose, children, maxWidth = 'max-w-xl',
       >
         <div className="flex items-start justify-between gap-4">
           <h2 className="text-xl font-semibold">{title}</h2>
-          <button ref={closeRef} onClick={onClose} aria-label="Close" className={`rounded-md p-1 ${MUTED} hover:bg-[#E8DEC7] dark:hover:bg-[#18181D]`}>
+          <button ref={closeRef} onClick={onClose} aria-label="Close" className={`rounded-md p-1 ${MUTED} hover:bg-[#F1F5F9] dark:hover:bg-white/5`}>
             <X size={18} />
           </button>
         </div>

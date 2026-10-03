@@ -411,4 +411,56 @@ export async function seedDemoData() {
   return { transactions: transactions.length, clients: clients.length, invoices: invoices.length };
 }
 
+/* ------------------------------------------------------------------ */
+/* Backup, restore and wipe (Settings > Data & Local Sync)             */
+/* ------------------------------------------------------------------ */
+
+/** Everything stored on this device as one plain object, ready to save as a .json backup. */
+export async function exportAllData() {
+  const [transactions, clients, invoices, settings] = await Promise.all([
+    db.transactions.toArray(), db.clients.toArray(), db.invoices.toArray(), getSettings(),
+  ]);
+  return { app: 'sirvanta-flow', version: 2, exportedAt: new Date().toISOString(), settings, transactions, clients, invoices };
+}
+
+/**
+ * Replaces transactions, clients and invoices with the backup's. Your current plan is kept,
+ * so importing a backup can never change which features are unlocked.
+ */
+export async function importAllData(data) {
+  const valid = data && data.app === 'sirvanta-flow' && Array.isArray(data.transactions) && Array.isArray(data.clients) && Array.isArray(data.invoices);
+  if (!valid) throw new Error('This file is not a Sirvanta Flow backup.');
+
+  const transactions = data.transactions
+    .map((t) => {
+      try {
+        return { ...normalizeTransaction(t), ...(Number.isInteger(t.id) ? { id: t.id } : {}) };
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean);
+  const clients = data.clients.filter((c) => c && typeof c.name === 'string');
+  const invoices = data.invoices.filter((i) => i && typeof i.invoiceNumber === 'string');
+  const current = await getSettings();
+  const incoming = data.settings && typeof data.settings === 'object' ? data.settings : {};
+
+  await db.transaction('rw', db.transactions, db.clients, db.invoices, db.settings, async () => {
+    await Promise.all([db.transactions.clear(), db.clients.clear(), db.invoices.clear()]);
+    await db.transactions.bulkPut(transactions);
+    await db.clients.bulkPut(clients);
+    await db.invoices.bulkPut(invoices);
+    await db.settings.put({ ...DEFAULT_SETTINGS, ...incoming, id: 1, userTier: current.userTier });
+  });
+  return { transactions: transactions.length, clients: clients.length, invoices: invoices.length };
+}
+
+/** Deletes every record and resets settings (including the plan) to their defaults. */
+export async function wipeEverything() {
+  await db.transaction('rw', db.transactions, db.clients, db.invoices, db.settings, async () => {
+    await Promise.all([db.transactions.clear(), db.clients.clear(), db.invoices.clear(), db.settings.clear()]);
+    await db.settings.put({ ...DEFAULT_SETTINGS });
+  });
+}
+
 export default db;

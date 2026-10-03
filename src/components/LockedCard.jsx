@@ -23,7 +23,7 @@ export default function LockedCard({ locked, tier, label, children }) {
         {children}
       </div>
       {locked && (
-        <div className="absolute inset-0 grid place-items-center rounded-xl bg-[#F3ECDD]/60 p-4 dark:bg-[#0A0A0C]/60">
+        <div className="absolute inset-0 grid place-items-center rounded-xl bg-[#F8FAFC]/60 p-4 dark:bg-[#09090B]/60">
           <div className={`${CARD} max-w-xs p-5 text-center`}>
             <Lock size={20} className={`mx-auto ${GOLD_TEXT}`} aria-hidden="true" />
             <p className="mt-2 text-sm font-semibold">{label}</p>

@@ -1,8 +1,8 @@
 // src/components/AdvisorTab.jsx
-// Service 04: Agentic AI and document intelligence ("Sirvanta Advisor").
-//   - Statement parser: drop a CSV/text file or paste statement text, rows are saved to the local database (Pro and above)
-//   - Scenario search: ask a what-if question, answered from a snapshot of your numbers (Pro and above)
-//   - Executive briefing: one-click Markdown report (Agency & CFO)
+// Service 04 building blocks ("Sirvanta Advisor"), composed into pages by the router:
+//   - StatementParserCard: drop a CSV/text file or paste statement text (Pro and above) -> Statement Parser
+//   - ScenarioCard: what-if questions answered from a snapshot of your numbers (Pro and above) -> AI Advisor
+//   - BriefingCard: one-click Markdown report (Agency & CFO) -> AI Advisor
 // Requests go through the Netlify function /.netlify/functions/sirvanta-advisor.
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -10,10 +10,8 @@ import { useLiveQuery } from 'dexie-react-hooks';
 import { Copy, Download, FileUp, Sparkles, Undo2 } from 'lucide-react';
 import { db, getSettings, addTransactions, recordAiUsage, TIER_LIMITS } from '../db';
 import { useStore } from '../store';
-import { tierAtLeast } from '../plans';
 import { usd } from '../finance';
 import { callAdvisor, parseStatement, dropDuplicates, buildContextSnapshot } from '../advisor';
-import LockedCard from './LockedCard';
 import Markdown from './Markdown';
 import {
   CARD_BLUE, CARD_INDIGO, CARD_GOLD, TINT_BLUE, TINT_INDIGO, TINT_GOLD, TINT_TEAL,
@@ -34,7 +32,7 @@ const ErrorNote = ({ children }) => (
 );
 
 /* ---------- monthly allowance strip ---------- */
-function UsageStrip({ userTier }) {
+export function UsageStrip({ userTier }) {
   const settings = useLiveQuery(() => getSettings(), []);
   const limits = TIER_LIMITS[userTier];
   const now = new Date();
@@ -51,7 +49,7 @@ function UsageStrip({ userTier }) {
 }
 
 /* ---------- statement parser ---------- */
-function StatementParserCard({ selectedEntity }) {
+export function StatementParserCard({ selectedEntity }) {
   const requireAi = useStore((s) => s.requireAi);
   const [text, setText] = useState('');
   const [fileName, setFileName] = useState('');
@@ -88,9 +86,9 @@ function StatementParserCard({ selectedEntity }) {
     if (!(await requireAi('parse', 'AI statement parsing'))) return;
 
     setBusy(true);
-    setProgress({ i: 1, n: 1 });
+    setProgress({ i: 1, n: 1, waiting: false });
     try {
-      const parsed = await parseStatement(text, { entity, onProgress: (i, n) => setProgress({ i, n }) });
+      const parsed = await parseStatement(text, { entity, onProgress: (i, n, waiting) => setProgress({ i, n, waiting }) });
       const { fresh, duplicates } = await dropDuplicates(parsed.rows);
       const saved = fresh.length ? await addTransactions(fresh) : { saved: 0, skipped: 0, ids: [] };
 
@@ -131,7 +129,7 @@ function StatementParserCard({ selectedEntity }) {
         onDragLeave={() => setDragging(false)}
         onDrop={(e) => { e.preventDefault(); setDragging(false); readFile(e.dataTransfer.files?.[0]); }}
         className={`mt-5 flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors focus-within:ring-2 focus-within:ring-[#C5A059] ${
-          dragging ? 'border-[#2E5FBF] bg-[#E1EBF8] dark:border-[#5B8DEF] dark:bg-[#111C2E]' : 'border-[#CBBE9F] hover:border-[#2E5FBF] dark:border-[#3F3F46]'
+          dragging ? 'border-[#2E5FBF] bg-[#E1EBF8] dark:border-[#5B8DEF] dark:bg-[#111C2E]' : 'border-[#CBD5E1] hover:border-[#2E5FBF] dark:border-white/15'
         }`}
       >
         <FileUp size={26} className="text-[#2E5FBF] dark:text-[#5B8DEF]" aria-hidden="true" />
@@ -153,7 +151,7 @@ function StatementParserCard({ selectedEntity }) {
             <option value="personal">Personal</option>
           </select>
         </div>
-        <button onClick={run} disabled={busy} className={`${BTN_GOLD} gap-2`}><Sparkles size={16} aria-hidden="true" />{busy ? `Parsing part ${progress?.i} of ${progress?.n}…` : 'Run AI Statement Parser'}</button>
+        <button onClick={run} disabled={busy} className={`${BTN_GOLD} gap-2`}><Sparkles size={16} aria-hidden="true" />{busy ? (progress?.waiting ? 'Waiting for the free AI limit…' : `Parsing part ${progress?.i} of ${progress?.n}…`) : 'Run AI Statement Parser'}</button>
       </div>
 
       {error && <ErrorNote>{error}</ErrorNote>}
@@ -195,13 +193,13 @@ function StatementParserCard({ selectedEntity }) {
           )}
         </div>
       )}
-      <Footnote>The statement text is sent through our server to Anthropic to be parsed. Review the imported rows, especially the deductible flags, before relying on them. Rows already in your books are skipped.</Footnote>
+      <Footnote>The statement text is sent through our server to the AI provider to be parsed. Review the imported rows, especially the deductible flags, before relying on them. Rows already in your books are skipped.</Footnote>
     </section>
   );
 }
 
 /* ---------- scenario search ---------- */
-function ScenarioCard({ entity }) {
+export function ScenarioCard({ entity }) {
   const requireAi = useStore((s) => s.requireAi);
   const [question, setQuestion] = useState('');
   const [busy, setBusy] = useState(false);
@@ -271,7 +269,7 @@ function ScenarioCard({ entity }) {
 }
 
 /* ---------- executive briefing ---------- */
-function BriefingCard({ entity }) {
+export function BriefingCard({ entity }) {
   const requireAi = useStore((s) => s.requireAi);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -348,33 +346,5 @@ function BriefingCard({ entity }) {
       )}
       <Footnote>The briefing covers all of your entities together. Figures come from your recorded transactions, so they can differ from live bank balances.</Footnote>
     </section>
-  );
-}
-
-/* ---------- tab ---------- */
-export default function AdvisorTab() {
-  const userTier = useStore((s) => s.userTier);
-  const selectedEntity = useStore((s) => s.selectedEntity);
-  const pro = tierAtLeast(userTier, 'pro');
-
-  return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Sirvanta Advisor</h1>
-      <p className={`mt-2 max-w-2xl ${MUTED}`}>Import statements in seconds, ask what-if questions, and get a monthly briefing built from your own numbers.</p>
-
-      <UsageStrip userTier={userTier} />
-
-      <div className="mt-6 space-y-6">
-        <LockedCard locked={!pro} tier="pro" label="AI statement parser">
-          <StatementParserCard selectedEntity={selectedEntity} />
-        </LockedCard>
-        <LockedCard locked={!pro} tier="pro" label="Financial scenario search">
-          <ScenarioCard entity={selectedEntity} />
-        </LockedCard>
-        <LockedCard locked={!tierAtLeast(userTier, 'agency')} tier="agency" label="1-click executive briefing">
-          <BriefingCard entity={selectedEntity} />
-        </LockedCard>
-      </div>
-    </div>
   );
 }

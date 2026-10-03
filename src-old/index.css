@@ -1,0 +1,20 @@
+/* src/index.css */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body { margin: 0; font-family: 'Plus Jakarta Sans', Inter, system-ui, sans-serif; }
+
+/* Invoice printing: only the .print-only copy of the invoice is shown on paper. */
+.print-only { display: none; }
+@media print {
+  @page { margin: 14mm; }
+  body > *:not(.print-only) { display: none !important; }
+  .print-only { display: block !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body { background: #ffffff !important; }
+}

@@ -11,9 +11,11 @@
   "dependencies": {
     "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
+    "framer-motion": "^14.0.0",
     "lucide-react": "^1.49.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-router-dom": "^7.18.4",
     "recharts": "^2.15.4",
     "zustand": "^5.0.15"
   },

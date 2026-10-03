@@ -4,9 +4,11 @@
 // real Stripe Checkout call when you are ready to bill customers.
 
 import React, { useEffect, useRef, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { X, Check, Lock } from 'lucide-react';
 import { useStore } from '../store';
-import { PLANS, TIER_NAMES } from '../plans';
+import { PLANS, TIER_NAMES, annualPrice } from '../plans';
+import { currencySymbol } from '../finance';
 import { CARD, MUTED, GOLD_TEXT, BTN_GOLD, BTN_OUTLINE, INPUT } from '../ui';
 
 const PAID_PLANS = PLANS.filter((p) => p.id !== 'free');
@@ -57,8 +59,12 @@ function Field({ id, label, error, ...props }) {
 function UpgradeFlow({ modal }) {
   const closeUpgrade = useStore((s) => s.closeUpgrade);
   const completeUpgrade = useStore((s) => s.completeUpgrade);
-  const enterApp = useStore((s) => s.enterApp);
-  const view = useStore((s) => s.view);
+  const navigate = useNavigate();
+  const inApp = useLocation().pathname.startsWith('/app');
+  const annual = modal.billing === 'annual';
+  const priceOf = (p) => (annual ? annualPrice(p) : p.price);
+  const unit = annual ? '/yr' : '/mo';
+  const sym = currencySymbol();
 
   const [step, setStep] = useState('plans'); // 'plans' | 'checkout' | 'processing' | 'done'
   const [tierId, setTierId] = useState(modal.tier);
@@ -114,7 +120,7 @@ function UpgradeFlow({ modal }) {
 
   const finish = () => {
     closeUpgrade();
-    if (view === 'landing') enterApp();
+    if (!inApp) navigate('/app/dashboard');
   };
 
   return (
@@ -133,7 +139,7 @@ function UpgradeFlow({ modal }) {
             </h2>
             {step === 'plans' && modal.reason && <p className={`mt-1 text-sm ${MUTED}`}>{modal.reason}</p>}
           </div>
-          <button ref={closeBtn} onClick={closeUpgrade} disabled={busy} aria-label="Close" className={`rounded-md p-1 ${MUTED} hover:bg-[#E8DEC7] disabled:opacity-40 dark:hover:bg-[#18181D]`}>
+          <button ref={closeBtn} onClick={closeUpgrade} disabled={busy} aria-label="Close" className={`rounded-md p-1 ${MUTED} hover:bg-[#F1F5F9] disabled:opacity-40 dark:hover:bg-white/5`}>
             <X size={18} />
           </button>
         </div>
@@ -150,12 +156,12 @@ function UpgradeFlow({ modal }) {
                     aria-checked={selected}
                     onClick={() => setTierId(p.id)}
                     className={`relative rounded-xl border p-4 text-left transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[#C5A059] ${
-                      selected ? 'border-[#C5A059] ring-1 ring-[#C5A059] dark:border-[#D4AF37] dark:ring-[#D4AF37]' : 'border-[#DDD2BA] hover:border-[#C5A059] dark:border-[#27272A]'
+                      selected ? 'border-[#C5A059] ring-1 ring-[#C5A059] dark:border-[#D4AF37] dark:ring-[#D4AF37]' : 'border-[#E2E8F0] hover:border-[#C5A059] dark:border-white/10'
                     }`}
                   >
-                    {p.popular && <span className="absolute -top-2.5 right-3 rounded-full bg-[#C5A059] px-2 py-0.5 text-[11px] font-bold text-[#1B2233] dark:bg-[#D4AF37]">Most popular</span>}
+                    {p.popular && <span className="absolute -top-2.5 right-3 rounded-full bg-[#C5A059] px-2 py-0.5 text-[11px] font-bold text-[#0F172A] dark:bg-[#D4AF37]">Most popular</span>}
                     <div className="font-semibold">{p.name}</div>
-                    <div className="mt-1 flex items-baseline gap-1"><span className="text-2xl font-extrabold">${p.price}</span><span className={`text-sm ${MUTED}`}>/mo</span></div>
+                    <div className="mt-1 flex items-baseline gap-1"><span className="text-2xl font-extrabold">{sym}{priceOf(p)}</span><span className={`text-sm ${MUTED}`}>{unit}</span></div>
                     <ul className="mt-3 space-y-1.5 text-sm">
                       {p.features.filter(([, on]) => on).slice(0, 5).map(([label]) => (
                         <li key={label} className="flex items-start gap-2"><Check size={14} className="mt-1 shrink-0 text-[#16A34A]" aria-hidden="true" />{label}</li>
@@ -167,7 +173,7 @@ function UpgradeFlow({ modal }) {
             </div>
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button onClick={closeUpgrade} className={BTN_OUTLINE}>Not now</button>
-              <button onClick={() => setStep('checkout')} className={BTN_GOLD}>Continue with {plan.name}, ${plan.price}/mo</button>
+              <button onClick={() => setStep('checkout')} className={BTN_GOLD}>Continue with {plan.name}, {sym}{priceOf(plan)}{unit}</button>
             </div>
           </>
         )}
@@ -185,12 +191,12 @@ function UpgradeFlow({ modal }) {
               {submitError && <p role="alert" className="text-sm text-[#DC2626]">{submitError}</p>}
             </div>
 
-            <aside className="h-fit rounded-xl bg-[#E9DEC4] p-4 text-sm dark:bg-[#1B1810]">
-              <div className="flex items-center justify-between font-semibold"><span>{plan.name}</span><span>${plan.price}/mo</span></div>
-              <p className={`mt-1 ${MUTED}`}>Billed monthly</p>
+            <aside className="h-fit rounded-xl bg-[#F1F5F9] p-4 text-sm dark:bg-[#1B1810]">
+              <div className="flex items-center justify-between font-semibold"><span>{plan.name}</span><span>{sym}{priceOf(plan)}{unit}</span></div>
+              <p className={`mt-1 ${MUTED}`}>{annual ? 'Billed yearly (20% off)' : 'Billed monthly'}</p>
               <p className="mt-4 flex items-start gap-2 text-xs leading-relaxed"><Lock size={14} className={`mt-0.5 shrink-0 ${GOLD_TEXT}`} aria-hidden="true" />Simulated checkout for testing. No card is charged and card details are not saved.</p>
               <button type="button" onClick={fillTestCard} disabled={busy} className={`mt-3 text-xs font-semibold underline ${GOLD_TEXT}`}>Fill test card</button>
-              <button type="submit" disabled={busy} className={`${BTN_GOLD} mt-4 w-full`}>{busy ? 'Processing…' : `Pay $${plan.price}`}</button>
+              <button type="submit" disabled={busy} className={`${BTN_GOLD} mt-4 w-full`}>{busy ? 'Processing…' : `Pay ${sym}${priceOf(plan)}`}</button>
               <button type="button" onClick={() => setStep('plans')} disabled={busy} className={`mt-2 w-full text-xs font-medium ${MUTED} underline`}>Change plan</button>
             </aside>
           </form>
@@ -206,7 +212,7 @@ function UpgradeFlow({ modal }) {
                 <li key={label} className="flex items-start gap-2"><Check size={16} className="mt-0.5 shrink-0 text-[#16A34A]" aria-hidden="true" />{label}</li>
               ))}
             </ul>
-            <button onClick={finish} className={`${BTN_GOLD} mt-6`}>{view === 'landing' ? 'Open my dashboard' : 'Continue'}</button>
+            <button onClick={finish} className={`${BTN_GOLD} mt-6`}>{inApp ? 'Continue' : 'Open my dashboard'}</button>
           </div>
         )}
       </div>

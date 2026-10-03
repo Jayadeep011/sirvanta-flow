@@ -1,0 +1,141 @@
+// src/content/docs.js
+// User manual content. Edit the text here; the Docs page renders and searches it.
+
+export const DOCS = [
+  {
+    id: 'getting-started',
+    title: 'Getting started',
+    intro: 'Sirvanta Flow keeps your money picture on your own device. You can explore everything your plan includes in a few minutes.',
+    steps: [
+      'Open the workspace. On the Free plan you start with read-only demo data so every screen has something in it.',
+      'Open the Dashboard to see your safe-to-spend figure, the 30-day forecast, and anything that needs attention.',
+      'Go to Settings, then Plan & Billing, to switch plans and unlock more tools.',
+      'On a paid plan, add your own clients, import a statement, and set your tax rates in the Tax Vault.',
+      'Export a backup from Settings, then Data & Local Sync, once you have real data.',
+    ],
+    tips: ['Press Cmd + K (Ctrl + K on Windows) anywhere in the workspace to jump to a page or run an action.'],
+  },
+  {
+    id: 'safe-to-spend',
+    title: 'How to read Safe-to-Spend',
+    intro: 'Safe-to-Spend is the cash you can use without touching money that is already spoken for.',
+    formula: 'Safe-to-spend = cash − (tax reserve + 30-day fixed expenses + emergency buffer)',
+    steps: [
+      'Enter your liquid cash balance. Use “Fill from my records” to take it from your saved transactions.',
+      'Enter the tax reserve you have set aside. At your rates, each 1,000 of income needs roughly 443 reserved if you use the US defaults.',
+      'Enter your fixed expenses for the next 30 days: rent, software, payroll, anything you cannot skip.',
+      'Set an emergency buffer. Three to six months of expenses is a common target.',
+      'Read the dial: green is yours to spend. If it turns red, your reserves are larger than your cash.',
+    ],
+    tips: ['Your bank balance is not your safe-to-spend. A large balance with a large unpaid tax bill is a trap.'],
+  },
+  {
+    id: 'virtual-salary',
+    title: 'Setting up Virtual Salary',
+    intro: 'Virtual Salary turns uneven monthly income into one steady draw you can plan around.',
+    formula: 'Safe draw = min( average revenue × (1 − V), target draw )',
+    steps: [
+      'Check the six monthly income figures. They come from your saved income. You can edit them to test a what-if.',
+      'Set your target draw: the monthly pay you would like.',
+      'Read the recommended safe draw. V is volatility: the standard deviation of your last six months divided by their average, capped at 100%. More swing means a smaller safe draw.',
+      'Pick a payday under Pay schedule. It is a reminder of when to pay yourself.',
+      'Press “Transfer to Personal Bank Account” to record the draw in your books, then move the money at your bank.',
+    ],
+    tips: ['The Starter plan shows a basic draw (average revenue capped at your target). Pro adds the volatility adjustment.'],
+  },
+  {
+    id: 'tax-vault',
+    title: 'How the Tax Vault works',
+    intro: 'The vault keeps estimated tax out of your spending money and counts down to the next payment.',
+    formula: 'Locked for tax = gross revenue × (federal % + state % + self-employment %)',
+    steps: [
+      'Choose your federal bracket and state rate, and switch self-employment tax on or off.',
+      'Pro and above: the vault reads this year’s business income from your transactions. Starter: type your revenue in.',
+      'Enter any estimated tax you have already paid. The suggested payment splits what is left across the payments remaining.',
+      'Watch the countdown to the next deadline. Deadlines on a weekend move to the following Monday.',
+      'Press “Generate IRS Voucher / Form 1040-ES Calculation” to download a planning worksheet.',
+    ],
+    tips: [
+      'Client meals count at 50% in the Schedule C scanner, as US rules require.',
+      'The calculation applies each rate to gross revenue. Your real liability depends on net profit, deductions and credits, so confirm with a tax professional.',
+    ],
+  },
+  {
+    id: 'client-matrix',
+    title: 'Reading the Client Matrix',
+    intro: 'The matrix shows what each client really pays you per hour once costs and unbilled work are counted.',
+    formula: 'Effective hourly rate = (revenue − direct expenses) ÷ (billed hours + scope-creep hours)',
+    steps: [
+      'Add each client with their monthly pay, hours, scope-creep hours, direct costs and average payment delay.',
+      'Open the leaderboard (Pro and above). Green is above 150 an hour, gold is 75 to 150, red is below 75.',
+      'For red clients, read the suggested fix: what billing the extra hours would do to their rate.',
+      'Build an invoice (Agency & CFO). The private summary shows the tax reserve before you send it.',
+      'Choose Print / Save PDF Invoice, then pick “Save as PDF” in the print window.',
+    ],
+    tips: ['Paused clients stay on file but are left out of the ranking and the blended rate.'],
+  },
+  {
+    id: 'statement-parser',
+    title: 'Importing a statement',
+    intro: 'The parser turns statement text into categorized transactions and flags likely write-offs.',
+    steps: [
+      'Open Statement Parser. Drop a CSV or text file, or paste text copied from a PDF statement.',
+      'Choose whether the rows belong to the Business or Personal workspace.',
+      'Press Run AI Statement Parser. Long statements are processed in pieces, and the button shows progress.',
+      'Review the imported rows and the DEDUCTIBLE flags. Rows already in your books are skipped.',
+      'Not right? Press Undo import right after, and the whole batch is removed.',
+    ],
+    tips: [
+      'PDF files cannot be read directly yet. Open the PDF, select all, copy, and paste the text.',
+      'Statement text is sent through our server to an AI provider to be read. Use sample data while testing.',
+    ],
+  },
+  {
+    id: 'ai-advisor',
+    title: 'Getting good answers from the AI Advisor',
+    intro: 'The Advisor answers from a snapshot of your own numbers. It is fastest and most accurate when your records are up to date.',
+    steps: [
+      'Ask one specific question with the amount and timing, for example “Can I spend 3,000 on servers next month if Apex pays 20 days late?”',
+      'Read the calculation it shows, not just the verdict.',
+      'Open “See exactly what was shared” to check the figures it was given.',
+      'Agency & CFO: generate the executive briefing for a one-page summary with your top three moves.',
+    ],
+    tips: ['AI can make arithmetic mistakes. Check any figure you plan to act on.'],
+  },
+  {
+    id: 'data-backup',
+    title: 'Backups and your data',
+    intro: 'Your records live in this browser. That keeps them private, and it means you are the backup.',
+    steps: [
+      'Go to Settings, then Data & Local Sync.',
+      'Press Export backup to save everything as a JSON file.',
+      'To restore, press Import backup and choose that file. It replaces the transactions, clients and invoices on this device. Your plan is kept.',
+      'To start fresh, use Wipe local data. It cannot be undone.',
+    ],
+    tips: ['Clearing your browser data, or using a different browser or device, means starting empty. Import a backup to bring your records over.'],
+  },
+  {
+    id: 'shortcuts',
+    title: 'Keyboard shortcuts',
+    intro: 'A few keys make the workspace faster.',
+    steps: [
+      'Cmd + K or Ctrl + K opens the command palette.',
+      'Arrow keys move through results and Enter runs one.',
+      'Esc closes the palette, menus and dialogs.',
+      'Tab moves between fields. Every control can be used without a mouse.',
+    ],
+    tips: [],
+  },
+  {
+    id: 'troubleshooting',
+    title: 'Troubleshooting',
+    intro: 'Common problems and what to do.',
+    steps: [
+      'The AI says it was not found: when running on your own computer, start the app with “npx netlify dev” instead of “npm run dev”.',
+      'The AI says it is busy or at its limit: free AI plans allow only a few requests a minute. Wait a minute and try again.',
+      'Numbers look wrong after changing currency: the currency label changes but amounts are not converted. Edit your figures if you need them in another currency.',
+      'A screen is blank after an update: reload the page. If it persists, export a backup before clearing browser data.',
+    ],
+    tips: [],
+  },
+];

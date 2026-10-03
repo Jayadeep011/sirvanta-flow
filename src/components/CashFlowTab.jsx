@@ -1,38 +1,36 @@
 // src/components/CashFlowTab.jsx
-// Service 01: Irregular cash flow and income smoothing.
-//   - Safe-to-Spend dial (all plans)
-//   - Virtual Salary Engine (Starter: basic, Pro and above: volatility-adjusted)
-//   - 12-month liquidity simulator with stress sliders (Pro and above)
+// Service 01 building blocks, composed into pages by the router:
+//   - SafeToSpendCard / SafeDial (all plans)           -> Safe-to-Spend Engine and Dashboard
+//   - SalaryEngineCard (Starter basic, Pro volatility-adjusted) -> Virtual Salary
+//   - LiquidityCard, 12-month simulator (Pro and above) -> Safe-to-Spend Engine
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { useLiveQuery } from 'dexie-react-hooks';
+import React, { useMemo, useState } from 'react';
 import { Area, AreaChart, CartesianGrid, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Lock, RotateCcw } from 'lucide-react';
-import { getSettings, updateSettings, getMonthlyIncomeHistory, logPersonalDistribution, effectiveTaxRate, TIER_LIMITS } from '../db';
+import { updateSettings, logPersonalDistribution, TIER_LIMITS } from '../db';
 import { useStore } from '../store';
-import { tierAtLeast, lockedMessage } from '../plans';
+import { lockedMessage } from '../plans';
 import MoneyField from './MoneyField';
-import LockedCard from './LockedCard';
 import {
-  usd, usdCompact, monthLabel, calcSafeDraw, calcSafeToSpend, dialSegments,
+  usd, usdCompact, calcSafeToSpend, dialSegments,
   projectLiquidity, summarizeProjection, getRecordedSnapshot,
 } from '../finance';
 import { CARD_BLUE, CARD_TEAL, CARD_INDIGO, TINT_BLUE, TINT_TEAL, TINT_GOLD, MUTED, GOLD_TEXT, DIVIDER, BTN_GOLD, BTN_OUTLINE } from '../ui';
 
 const ARC = 'M 20 130 A 110 110 0 0 1 240 130';
 
-function SafeDial({ inputs }) {
+export function SafeDial({ inputs }) {
   const { safe, short } = calcSafeToSpend(inputs);
   const seg = dialSegments(inputs);
   const parts = [
     { len: seg.tax, start: 0, cls: 'stroke-[#D97706]' },
-    { len: seg.burn, start: seg.tax, cls: 'stroke-[#655D4C] dark:stroke-[#71717A]' },
+    { len: seg.burn, start: seg.tax, cls: 'stroke-[#64748B] dark:stroke-[#71717A]' },
     { len: seg.safe, start: seg.tax + seg.burn, cls: 'stroke-[#16A34A]' },
   ];
   return (
     <div className="relative mx-auto w-full max-w-[360px]">
       <svg viewBox="0 0 260 150" className="w-full" role="img" aria-label={`Safe to spend ${usd(Math.max(safe, 0))}`}>
-        <path d={ARC} fill="none" strokeWidth="18" pathLength="100" className="stroke-[#E5DAC2] dark:stroke-[#27272A]" />
+        <path d={ARC} fill="none" strokeWidth="18" pathLength="100" className="stroke-[#E2E8F0] dark:stroke-[#27272A]" />
         {parts.map((p, i) =>
           p.len > 0.2 ? (
             <path
@@ -57,7 +55,7 @@ function SafeDial({ inputs }) {
 }
 
 /* ---------- Safe-to-Spend card ---------- */
-function SafeToSpendCard({ inputs, setInputs, taxRate, canSave, entity }) {
+export function SafeToSpendCard({ inputs, setInputs, taxRate, canSave, entity }) {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const { safe, short } = calcSafeToSpend(inputs);
@@ -94,7 +92,7 @@ function SafeToSpendCard({ inputs, setInputs, taxRate, canSave, entity }) {
       <dl className="mt-4 grid grid-cols-3 gap-2 text-xs">
         {[
           ['bg-[#D97706]', 'Locked for tax', usd(inputs.tax)],
-          ['bg-[#655D4C] dark:bg-[#71717A]', 'Bills and buffer', usd(inputs.expenses + inputs.buffer)],
+          ['bg-[#64748B] dark:bg-[#71717A]', 'Bills and buffer', usd(inputs.expenses + inputs.buffer)],
           ['bg-[#16A34A]', 'Safe', usd(Math.max(safe, 0))],
         ].map(([dot, label, value]) => (
           <div key={label}>
@@ -127,7 +125,7 @@ function SafeToSpendCard({ inputs, setInputs, taxRate, canSave, entity }) {
 }
 
 /* ---------- Virtual Salary Engine card ---------- */
-function SalaryEngineCard({ entries, labels, overridden, onEdit, onReset, target, setTarget, engine, full, userTier }) {
+export function SalaryEngineCard({ entries, labels, overridden, onEdit, onReset, target, setTarget, engine, full, userTier }) {
   const openUpgrade = useStore((s) => s.openUpgrade);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState(null); // { ok: boolean, text: string }
@@ -163,7 +161,7 @@ function SalaryEngineCard({ entries, labels, overridden, onEdit, onReset, target
           <p className={`mt-1 text-sm ${MUTED}`}>Turns six uneven months into one steady paycheck.</p>
         </div>
         {overridden && (
-          <button onClick={onReset} className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${MUTED} hover:bg-[#E8DEC7] dark:hover:bg-[#18181D]`}>
+          <button onClick={onReset} className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${MUTED} hover:bg-[#F1F5F9] dark:hover:bg-white/5`}>
             <RotateCcw size={13} aria-hidden="true" />Reset to recorded
           </button>
         )}
@@ -219,7 +217,7 @@ function SalaryEngineCard({ entries, labels, overridden, onEdit, onReset, target
 }
 
 /* ---------- Liquidity simulator card ---------- */
-function LiquidityCard({ start, monthlyInflow, expenses, draw, buffer, taxRate }) {
+export function LiquidityCard({ start, monthlyInflow, expenses, draw, buffer, taxRate }) {
   const darkMode = useStore((s) => s.darkMode);
   const [delay, setDelay] = useState(0);
   const [drop, setDrop] = useState(0);
@@ -239,8 +237,8 @@ function LiquidityCard({ start, monthlyInflow, expenses, draw, buffer, taxRate }
     };
   }, [start, monthlyInflow, expenses, draw, buffer, taxRate, delay, drop, months]);
 
-  const axis = darkMode ? '#A1A1AA' : '#655D4C';
-  const grid = darkMode ? '#27272A' : '#DDD2BA';
+  const axis = darkMode ? '#A1A1AA' : '#64748B';
+  const grid = darkMode ? '#27272A' : '#E2E8F0';
 
   let status = { tone: 'text-[#16A34A]', text: 'Your balance stays above your emergency buffer for all 12 months.' };
   if (summary.zeroMonth !== null) {
@@ -257,7 +255,7 @@ function LiquidityCard({ start, monthlyInflow, expenses, draw, buffer, taxRate }
           <p className={`mt-1 text-sm ${MUTED}`}>Drag the sliders to test late-paying clients and a drop in revenue.</p>
         </div>
         {(delay > 0 || drop > 0) && (
-          <button onClick={() => { setDelay(0); setDrop(0); }} className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${MUTED} hover:bg-[#E8DEC7] dark:hover:bg-[#18181D]`}>
+          <button onClick={() => { setDelay(0); setDrop(0); }} className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs font-semibold ${MUTED} hover:bg-[#F1F5F9] dark:hover:bg-white/5`}>
             <RotateCcw size={13} aria-hidden="true" />Reset sliders
           </button>
         )}
@@ -288,7 +286,7 @@ function LiquidityCard({ start, monthlyInflow, expenses, draw, buffer, taxRate }
             <YAxis tickFormatter={usdCompact} tick={{ fill: axis, fontSize: 12 }} axisLine={false} tickLine={false} width={56} />
             <Tooltip
               formatter={(v, name) => [usd(v), name]}
-              contentStyle={{ background: darkMode ? '#121216' : '#FAF6EC', border: `1px solid ${grid}`, borderRadius: 8, fontSize: 13 }}
+              contentStyle={{ background: darkMode ? '#121216' : '#FFFFFF', border: `1px solid ${grid}`, borderRadius: 8, fontSize: 13 }}
               labelStyle={{ color: axis }}
             />
             <ReferenceLine y={0} stroke="#DC2626" strokeOpacity={0.5} />
@@ -318,81 +316,5 @@ function LiquidityCard({ start, monthlyInflow, expenses, draw, buffer, taxRate }
         Assumes your average monthly revenue continues, {Math.round(taxRate * 1000) / 10}% of each payment is set aside for taxes, and you pay yourself the draw above. The starting balance is your cash minus your tax reserve. A delay pushes every payment back, which leaves a gap at the start.
       </p>
     </section>
-  );
-}
-
-/* ---------- tab ---------- */
-export default function CashFlowTab() {
-  const userTier = useStore((s) => s.userTier);
-  const selectedEntity = useStore((s) => s.selectedEntity);
-
-  const settings = useLiveQuery(() => getSettings(), []);
-  const history = useLiveQuery(() => getMonthlyIncomeHistory(6, selectedEntity), [selectedEntity]);
-
-  const [inputs, setInputs] = useState({ cash: 48000, tax: 11500, expenses: 3000, buffer: 15000 });
-  const [target, setTarget] = useState(4000);
-  const [override, setOverride] = useState(null);
-  const seeded = useRef(false);
-
-  useEffect(() => {
-    if (settings && !seeded.current) {
-      seeded.current = true;
-      setInputs((p) => ({ ...p, expenses: settings.monthlyBurn, buffer: settings.bufferTarget }));
-    }
-  }, [settings]);
-
-  useEffect(() => setOverride(null), [selectedEntity]);
-
-  const recorded = history ? history.map((h) => h.income) : [0, 0, 0, 0, 0, 0];
-  const entries = override ?? recorded;
-  const labels = history ? history.map((h) => monthLabel(h.month)) : ['Month 1', 'Month 2', 'Month 3', 'Month 4', 'Month 5', 'Month 6'];
-
-  const hasStarter = tierAtLeast(userTier, 'starter');
-  const full = tierAtLeast(userTier, 'pro');
-  const engine = calcSafeDraw(entries, target, full);
-  const taxRate = settings ? effectiveTaxRate(settings) : 0.443;
-
-  const editEntry = (i, value) => {
-    const next = [...entries];
-    next[i] = value;
-    setOverride(next);
-  };
-
-  return (
-    <div>
-      <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Irregular cash flow and income smoothing</h1>
-      <p className={`mt-2 max-w-2xl ${MUTED}`}>Turn uneven monthly income into a predictable draw, see what is safe to spend, and test how late clients or lost revenue would change the next year.</p>
-
-      <div className="mt-8 grid items-start gap-6 lg:grid-cols-2">
-        <SafeToSpendCard inputs={inputs} setInputs={setInputs} taxRate={taxRate} canSave={TIER_LIMITS[userTier].canSaveData} entity={selectedEntity} />
-        <LockedCard locked={!hasStarter} tier="starter" label="Virtual Salary Engine">
-          <SalaryEngineCard
-            entries={entries}
-            labels={labels}
-            overridden={override !== null}
-            onEdit={editEntry}
-            onReset={() => setOverride(null)}
-            target={target}
-            setTarget={setTarget}
-            engine={engine}
-            full={full}
-            userTier={userTier}
-          />
-        </LockedCard>
-      </div>
-
-      <div className="mt-6">
-        <LockedCard locked={!full} tier="pro" label="12-month liquidity simulator">
-          <LiquidityCard
-            start={inputs.cash - inputs.tax}
-            monthlyInflow={engine.avg}
-            expenses={inputs.expenses}
-            draw={engine.draw}
-            buffer={inputs.buffer}
-            taxRate={taxRate}
-          />
-        </LockedCard>
-      </div>
-    </div>
   );
 }

@@ -1,6 +1,7 @@
 // src/store.js
 // Global app state (Zustand). Persistent data lives in Dexie (db.js); this store holds
-// navigation, theme, the current plan, and the access-control "gatekeeper" actions.
+// preferences (theme, currency, language), the current plan, shared Safe-to-Spend inputs,
+// and the access-control "gatekeeper" actions. Navigation itself is handled by React Router.
 
 import { create } from 'zustand';
 import {
@@ -8,42 +9,74 @@ import {
   hasFeature, getAiUsage, TIER_LIMITS,
 } from './db';
 import { TIER_ORDER, TIER_NAMES, lockedMessage } from './plans';
-
-export const TABS = [
-  { id: 'cashflow', label: 'Cash flow' },
-  { id: 'tax', label: 'Tax & expenses' },
-  { id: 'clients', label: 'Clients' },
-  { id: 'ai', label: 'Sirvanta Advisor' },
-  { id: 'pricing', label: 'Pricing' },
-];
+import { COUNTRIES } from './regions';
+import { setCurrency } from './finance';
 
 const THEME_KEY = 'sirvanta-theme';
+const SIDEBAR_KEY = 'sirvanta-sidebar';
+
+const readLocal = (key) => {
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+const writeLocal = (key, value) => {
+  try {
+    localStorage.setItem(key, value);
+  } catch {
+    // The preference still applies for this session if storage is unavailable.
+  }
+};
 
 const readTheme = () => {
-  try {
-    return localStorage.getItem(THEME_KEY) === 'dark';
-  } catch {
-    return false;
-  }
+  const saved = readLocal(THEME_KEY);
+  if (saved) return saved === 'dark';
+  return typeof window !== 'undefined' && window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)').matches : true;
 };
 
 /** Lowest plan that includes a feature flag from TIER_LIMITS. */
 const lowestTierWith = (feature) => TIER_ORDER.find((t) => hasFeature(t, feature)) || 'pro';
 
+export const DEFAULT_PROFILE = { name: '', email: '' };
+export const DEFAULT_CASH_INPUTS = { cash: 48000, tax: 11500, expenses: 3000, buffer: 15000 };
+
 export const useStore = create((set, get) => ({
-  view: 'landing', // 'landing' | 'app'
-  activeTab: 'cashflow', // 'cashflow' | 'tax' | 'clients' | 'ai' | 'pricing'
   darkMode: readTheme(),
+  sidebarCollapsed: readLocal(SIDEBAR_KEY) === '1',
+  mobileNavOpen: false,
+  paletteOpen: false,
+
   userTier: 'free', // 'free' | 'starter' | 'pro' | 'agency'
   selectedEntity: 'business', // 'business' | 'personal' | 'consolidated'
+  currency: 'USD',
+  country: 'US',
+  language: 'en',
+  profile: DEFAULT_PROFILE,
+  fiscalYearEnd: { month: 11, day: 31 }, // month is 0-based (11 = December)
   ready: false,
-  upgradeModal: null, // null | { reason: string, tier: 'starter' | 'pro' | 'agency' }
+  upgradeModal: null, // null | { reason, tier, billing }
+
+  // Safe-to-Spend inputs shared by the Dashboard, Safe-to-Spend Engine and simulator. null = not loaded yet.
+  cashInputs: null,
+  targetDraw: 4000,
 
   /* ---- startup ---- */
   init: async () => {
     try {
-      const settings = await getSettings();
-      set({ userTier: settings.userTier, selectedEntity: settings.selectedEntity, ready: true });
+      const s = await getSettings();
+      setCurrency(s.currency || 'USD');
+      set({
+        userTier: s.userTier,
+        selectedEntity: s.selectedEntity,
+        currency: s.currency || 'USD',
+        country: s.country || 'US',
+        language: s.language || 'en',
+        profile: { ...DEFAULT_PROFILE, ...(s.profile || {}) },
+        fiscalYearEnd: s.fiscalYearEnd || { month: 11, day: 31 },
+        ready: true,
+      });
     } catch (err) {
       // IndexedDB can be blocked (some private-browsing modes). Fall back to in-memory defaults.
       console.error('Sirvanta: could not open local database.', err);
@@ -51,32 +84,72 @@ export const useStore = create((set, get) => ({
     }
   },
 
-  /* ---- navigation and theme ---- */
-  enterApp: async () => {
-    if (get().userTier === 'free') {
-      try {
-        if ((await db.transactions.count()) === 0) await seedDemoData();
-      } catch (err) {
-        console.error('Sirvanta: could not load demo data.', err);
-      }
-    }
-    set({ view: 'app', activeTab: 'cashflow' });
-  },
-  goLanding: () => set({ view: 'landing' }),
-  setActiveTab: (tab) => set({ activeTab: tab }),
-  toggleTheme: () => {
-    const next = !get().darkMode;
+  /** Called when the workspace opens. Free sandbox users get demo data the first time. */
+  prepareWorkspace: async () => {
+    if (get().userTier !== 'free') return;
     try {
-      localStorage.setItem(THEME_KEY, next ? 'dark' : 'light');
-    } catch {
-      // Theme still switches for this session if storage is unavailable.
+      if ((await db.transactions.count()) === 0) await seedDemoData();
+    } catch (err) {
+      console.error('Sirvanta: could not load demo data.', err);
     }
-    set({ darkMode: next });
   },
 
+  /* ---- interface preferences ---- */
+  toggleTheme: () => {
+    const next = !get().darkMode;
+    writeLocal(THEME_KEY, next ? 'dark' : 'light');
+    set({ darkMode: next });
+  },
+  toggleSidebar: () => {
+    const next = !get().sidebarCollapsed;
+    writeLocal(SIDEBAR_KEY, next ? '1' : '0');
+    set({ sidebarCollapsed: next });
+  },
+  setMobileNav: (open) => set({ mobileNavOpen: open }),
+  setPalette: (open) => set({ paletteOpen: open }),
+
+  /* ---- regional settings (saved with the rest of your local data) ---- */
+  setCurrency: async (code) => {
+    setCurrency(code);
+    set({ currency: code });
+    await updateSettings({ currency: code }).catch(() => {});
+  },
+  setLanguage: async (code) => {
+    set({ language: code });
+    await updateSettings({ language: code }).catch(() => {});
+  },
+  /** Applies a country's currency and starting tax-rate preset. */
+  setCountry: async (id) => {
+    const preset = COUNTRIES.find((c) => c.id === id);
+    if (!preset) return;
+    setCurrency(preset.currency);
+    set({ country: id, currency: preset.currency, cashInputs: null });
+    await updateSettings({
+      country: id, currency: preset.currency,
+      federalTaxRate: preset.federal, stateTaxRate: preset.state, selfEmploymentTax: preset.se,
+    }).catch(() => {});
+  },
+  setFiscalYearEnd: async (value) => {
+    set({ fiscalYearEnd: value });
+    await updateSettings({ fiscalYearEnd: value }).catch(() => {});
+  },
+  updateProfile: async (patch) => {
+    const profile = { ...get().profile, ...patch };
+    set({ profile });
+    await updateSettings({ profile }).catch(() => {});
+  },
+
+  /* ---- shared Safe-to-Spend inputs ---- */
+  setCashInputs: (valueOrUpdater) =>
+    set((s) => {
+      const base = s.cashInputs || DEFAULT_CASH_INPUTS;
+      return { cashInputs: typeof valueOrUpdater === 'function' ? valueOrUpdater(base) : valueOrUpdater };
+    }),
+  setTargetDraw: (value) => set({ targetDraw: value }),
+
   /* ---- plan changes ---- */
-  openUpgrade: (reason = '', tier = 'pro') =>
-    set({ upgradeModal: { reason, tier: tier === 'free' ? 'pro' : tier } }),
+  openUpgrade: (reason = '', tier = 'pro', billing = 'monthly') =>
+    set({ upgradeModal: { reason, tier: tier === 'free' ? 'pro' : tier, billing } }),
   closeUpgrade: () => set({ upgradeModal: null }),
 
   /** Switch plan without opening the modal (used after checkout and for test downgrades). */
@@ -86,6 +159,7 @@ export const useStore = create((set, get) => ({
     if (!hasFeature(tier, 'entitySwitcher') && get().selectedEntity !== 'business') {
       await updateSettings({ selectedEntity: 'business' });
       patch.selectedEntity = 'business';
+      patch.cashInputs = null;
     }
     set(patch);
   },
@@ -136,19 +210,25 @@ export const useStore = create((set, get) => ({
     return true;
   },
 
-  /* ---- entity switcher (Agency & CFO) ---- */
+  /* ---- workspace switcher (Agency & CFO) ---- */
   setEntity: async (entity) => {
     const { userTier, openUpgrade } = get();
     if (entity !== 'business' && !hasFeature(userTier, 'entitySwitcher')) {
-      openUpgrade(lockedMessage('The multi-entity switcher', 'agency'), 'agency');
+      openUpgrade(lockedMessage('Multiple workspaces', 'agency'), 'agency');
       return;
     }
     await updateSettings({ selectedEntity: entity });
-    set({ selectedEntity: entity });
+    set({ selectedEntity: entity, cashInputs: null });
   },
 
   /* ---- data ---- */
   clearSampleData: async () => {
     await clearAllData();
+    set({ cashInputs: null });
+  },
+  /** Re-reads settings after an import or wipe. */
+  reloadAfterDataChange: async () => {
+    set({ cashInputs: null });
+    await get().init();
   },
 }));
